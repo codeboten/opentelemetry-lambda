@@ -30,6 +30,8 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanprocessor"
+
+	"github.com/open-telemetry/opentelemetry-lambda/collector/receiver/telemetryapireceiver"
 )
 
 func Components() (component.Factories, error) {
@@ -37,6 +39,7 @@ func Components() (component.Factories, error) {
 
 	receivers, err := component.MakeReceiverFactoryMap(
 		otlpreceiver.NewFactory(),
+		telemetryapireceiver.NewFactory(),
 	)
 	if err != nil {
 		errs = append(errs, err)

@@ -10,6 +10,7 @@ require (
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/probabilisticsamplerprocessor v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourceprocessor v0.66.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/processor/spanprocessor v0.66.0
+	github.com/open-telemetry/opentelemetry-lambda/collector/receiver/telemetryapireceiver v0.66.0
 	go.opentelemetry.io/collector/component v0.66.0
 	go.opentelemetry.io/collector/exporter/loggingexporter v0.66.0
 	go.opentelemetry.io/collector/exporter/otlpexporter v0.66.0
@@ -100,3 +101,5 @@ require (
 //        cloud.google.com/go/compute
 // Force cloud.google.com/go to be at least v0.107.0, so that the metadata is not present.
 replace cloud.google.com/go => cloud.google.com/go v0.107.0
+
+replace github.com/open-telemetry/opentelemetry-lambda/collector/receiver/telemetryapireceiver => ../receiver/telemetryapireceiver
