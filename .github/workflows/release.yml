@@ -42,7 +42,7 @@ jobs:
         architecture: ${{ fromJson(github.event.inputs.architecture) }}
         aws_region: ${{ fromJson(github.event.inputs.aws_region) }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v1-node16
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.INTEG_TEST_LAMBDA_ROLE_ARN }}
           role-duration-seconds: 1200
@@ -61,7 +61,7 @@ jobs:
           URL=$(aws lambda get-layer-version-by-arn --arn ${{ env.LAYER_ARN }} --query Content.Location --output text)
           curl $URL -o layer.zip
       # switch to prod
-      - uses: aws-actions/configure-aws-credentials@v1-node16
+      - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
           role-duration-seconds: 1200
