@@ -42,11 +42,6 @@ jobs:
         architecture: ${{ fromJson(github.event.inputs.architecture) }}
         aws_region: ${{ fromJson(github.event.inputs.aws_region) }}
     steps:
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.INTEG_TEST_LAMBDA_ROLE_ARN }}
-          role-duration-seconds: 1200
-          aws-region: us-east-1
       - name: Get layer ARN by substituting `${{ matrix.architecture }}` into Soak Test ARN keyword
         run: |
           echo LAYER_ARN=$(echo "${{ github.event.inputs.layer_arn_keyword }}" | sed 's/<ARCHITECTURE>/${{ matrix.architecture }}/') | tee --append $GITHUB_ENV
@@ -56,10 +51,6 @@ jobs:
       - name: Get layer kind by parsing `${{ github.event.inputs.layer_name_keyword }}`
         run: |
           echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 3) | tee --append $GITHUB_ENV
-      - name: download layer from source
-        run: |
-          URL=$(aws lambda get-layer-version-by-arn --arn ${{ env.LAYER_ARN }} --query Content.Location --output text)
-          curl $URL -o layer.zip
       # switch to prod
       - uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -70,21 +61,12 @@ jobs:
       - name: Get bucket name for release run
         run: |
           echo BUCKET_NAME=publish-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }}-${{ matrix.aws_region }} | tee --append $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '^1.19.4'
       - name: publish
-        run: |
-          aws s3 mb s3://${{ env.BUCKET_NAME }}
-          aws s3 cp layer.zip s3://${{ env.BUCKET_NAME }}
-          layerARN=$(
-            aws lambda publish-layer-version \
-              --layer-name ${{ env.LAYER_NAME }} \
-              --content S3Bucket=${{ env.BUCKET_NAME }},S3Key=layer.zip \
-              --query 'LayerVersionArn' \
-              --output text
-          )
-          echo $layerARN
-          mkdir ${{ env.LAYER_NAME }}
-          echo $layerARN > ${{ env.LAYER_NAME }}/${{ matrix.aws_region }}
-          cat ${{ env.LAYER_NAME }}/${{ matrix.aws_region }}
+        run: make -C ${{ env.LAYER_KIND }} publish
       - name: public layer
         run: |
           layerVersion=$(
