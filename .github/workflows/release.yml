@@ -41,7 +41,7 @@ jobs:
           echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 2) | tee --append $GITHUB_ENV
       - name: Get bucket name for release run
         run: |
-          echo BUCKET_NAME=lambda-artifact-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }} | tee --append $GITHUB_ENV
+          echo BUCKET_NAME=lambda-artifacts-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }} | tee --append $GITHUB_ENV
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
@@ -71,7 +71,7 @@ jobs:
           echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 2) | tee --append $GITHUB_ENV
       - name: Get bucket name for release run
         run: |
-          echo BUCKET_NAME=lambda-artifact-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }} | tee --append $GITHUB_ENV
+          echo BUCKET_NAME=lambda-artifacts-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }} | tee --append $GITHUB_ENV
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
