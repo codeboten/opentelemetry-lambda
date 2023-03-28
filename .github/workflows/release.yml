@@ -46,6 +46,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
           role-duration-seconds: 1200
+          aws-region: us-east-1
           mask-aws-account-id: false
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
