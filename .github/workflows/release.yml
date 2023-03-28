@@ -26,6 +26,13 @@ jobs:
       - name: Validate `layer_name_keyword` (${{ github.event.inputs.layer_name_keyword }})
         run: |
           grep -Eq "opentelemetry-(collector|java-agent|java-wrapper|nodejs|python)(-dev)*-<ARCHITECTURE>" <<< "${{ github.event.inputs.layer_name_keyword }}"
+  build-archive:
+    runs-on: ubuntu-latest
+    needs: validate-inputs
+    strategy:
+      matrix:
+        architecture: ${{ fromJson(github.event.inputs.architecture) }}
+    steps:
       - name: Get layer name by substituting `${{ matrix.architecture }}` into Workflow Input name keyword
         run: |
           echo LAYER_NAME=$(echo "${{ github.event.inputs.layer_name_keyword }}" | sed 's/<ARCHITECTURE>/${{ matrix.architecture }}/') | tee --append $GITHUB_ENV
@@ -35,13 +42,6 @@ jobs:
       - name: Get bucket name for release run
         run: |
           echo BUCKET_NAME=lambda-artifact-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }}-${{ matrix.aws_region }} | tee --append $GITHUB_ENV
-  build-archive:
-    runs-on: ubuntu-latest
-    needs: validate-inputs
-    strategy:
-      matrix:
-        architecture: ${{ fromJson(github.event.inputs.architecture) }}
-    steps:
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
@@ -63,6 +63,15 @@ jobs:
         architecture: ${{ fromJson(github.event.inputs.architecture) }}
         aws_region: ${{ fromJson(github.event.inputs.aws_region) }}
     steps:
+      - name: Get layer name by substituting `${{ matrix.architecture }}` into Workflow Input name keyword
+        run: |
+          echo LAYER_NAME=$(echo "${{ github.event.inputs.layer_name_keyword }}" | sed 's/<ARCHITECTURE>/${{ matrix.architecture }}/') | tee --append $GITHUB_ENV
+      - name: Get layer kind by parsing `${{ github.event.inputs.layer_name_keyword }}`
+        run: |
+          echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 2) | tee --append $GITHUB_ENV
+      - name: Get bucket name for release run
+        run: |
+          echo BUCKET_NAME=lambda-artifact-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }}-${{ matrix.aws_region }} | tee --append $GITHUB_ENV
       - uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
