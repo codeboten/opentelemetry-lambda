@@ -33,28 +33,21 @@ jobs:
       matrix:
         architecture: ${{ fromJson(github.event.inputs.architecture) }}
     steps:
-      - name: Get layer name by substituting `${{ matrix.architecture }}` into Workflow Input name keyword
-        run: |
-          echo LAYER_NAME=$(echo "${{ github.event.inputs.layer_name_keyword }}" | sed 's/<ARCHITECTURE>/${{ matrix.architecture }}/') | tee --append $GITHUB_ENV
       - name: Get layer kind by parsing `${{ github.event.inputs.layer_name_keyword }}`
         run: |
           echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 2) | tee --append $GITHUB_ENV
-      - name: Get bucket name for release run
-        run: |
-          echo BUCKET_NAME=lambda-artifacts-${{ env.LAYER_KIND }}-${{ matrix.architecture }}-${{ github.run_id }} | tee --append $GITHUB_ENV
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ secrets.PROD_LAMBDA_ROLE_ARN }}
-          role-duration-seconds: 1200
-          aws-region: us-east-1
-          mask-aws-account-id: false
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: '^1.19.4'
       - name: build
         run: |
-          make -C ${{ env.LAYER_KIND }} build-and-upload BUCKET_NAME=${{ env.BUCKET_NAME }} GOARCH=${{ matrix.architecture }}
+          make -C ${{ env.LAYER_KIND }} package GOARCH=${{ matrix.architecture }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: |
+            ${{ env.GITHUB_WORKSPACE }}/${{ env.LAYER_NAME }}/build/*.zip
   publish-prod:
     runs-on: ubuntu-latest
     needs: build-archive
@@ -79,9 +72,16 @@ jobs:
           aws-region: ${{ matrix.aws_region }}
           mask-aws-account-id: false
       - uses: actions/checkout@v3
+      - name: add build directory
+        run: |
+          mkdir -p ${{ env.GITHUB_WORKSPACE }}/${{ env.LAYER_NAME }}/build
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: ${{ env.GITHUB_WORKSPACE }}/${{ env.LAYER_NAME }}/build/
       - name: publish
         run: |
-          make -C ${{ env.LAYER_KIND }} publish LAYER_NAME=${{ env.LAYER_NAME }} BUCKET_NAME=${{ env.BUCKET_NAME }} GOARCH=${{ matrix.architecture }}
+          make -C ${{ env.LAYER_KIND }} publish LAYER_NAME=${{ env.LAYER_NAME }} GOARCH=${{ matrix.architecture }}
       - name: public layer
         run: |
           layerVersion=$(
@@ -101,10 +101,6 @@ jobs:
         with:
           name: ${{ env.LAYER_NAME }}
           path: ${{ env.LAYER_NAME }}/${{ matrix.aws_region }}
-      - name: clean s3
-        if: always()
-        run: |
-          aws s3 rb --force s3://${{ env.BUCKET_NAME }}
   generate-note:
     runs-on: ubuntu-latest
     needs: publish-prod

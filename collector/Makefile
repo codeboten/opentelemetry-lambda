@@ -46,24 +46,14 @@ package: build
 	cp config* $(BUILD_SPACE)/collector-config
 	cd $(BUILD_SPACE) && zip -r collector-extension-$(GOARCH).zip collector-config extensions
 
-.PHONY: build-and-upload
-build-and-upload: package
-	aws s3 mb s3://$(BUCKET_NAME)
-	aws s3 cp $(BUILD_SPACE)/collector-extension-$(GOARCH).zip s3://$(BUCKET_NAME)
-
+.PHONY: publish
 publish:
 	@echo Publishing collector extension layer...
-	aws lambda publish-layer-version --layer-name $(LAYER_NAME) --content S3Bucket=$(BUCKET_NAME),S3Key=collector-extension-$(GOARCH).zip --compatible-runtimes nodejs14.x nodejs16.x nodejs18.x java11 python3.8 python3.9 --query 'LayerVersionArn' --output text
+	aws lambda publish-layer-version --layer-name $(LAYER_NAME) --content $(BUILD_SPACE)/collector-extension-$(GOARCH).zip --compatible-runtimes nodejs14.x nodejs16.x nodejs18.x java11 python3.8 python3.9 --query 'LayerVersionArn' --output text
 	@echo OpenTelemetry Collector layer published.
 
 .PHONY: publish-layer
-publish-layer: build-and-upload publish
-
-.PHONY: clear-upload
-clear-upload:
-	@echo Clearing cached files...
-	aws s3 rm s3://$(BUCKET_NAME)/collector-extension-$(GOARCH).zip
-	aws s3 rb s3://$(BUCKET_NAME)
+publish-layer: package publish
 
 .PHONY: gotidy
 gotidy:
