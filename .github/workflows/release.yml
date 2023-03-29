@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: publish
         run: |
-          make -C ${{ env.LAYER_KIND }} publish-layer LAYER_NAME=${{ env.LAYER_NAME }} BUCKET_NAME=${{ env.BUCKET_NAME }} GOARCH=${{ matrix.architecture }}
+          make -C ${{ env.LAYER_KIND }} publish LAYER_NAME=${{ env.LAYER_NAME }} BUCKET_NAME=${{ env.BUCKET_NAME }} GOARCH=${{ matrix.architecture }}
       - name: public layer
         run: |
           layerVersion=$(
