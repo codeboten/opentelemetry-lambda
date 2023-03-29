@@ -81,7 +81,7 @@ jobs:
           path: ${{ github.workspace }}/${{ env.LAYER_KIND }}/build/
       - name: publish
         run: |
-          make -C ${{ env.LAYER_KIND }} publish LAYER_NAME=${{ env.LAYER_NAME }} GOARCH=${{ matrix.architecture }}
+          make -C ${{ env.LAYER_KIND }} publish LAYER_NAME=${{ env.LAYER_NAME }} GOARCH=${{ matrix.architecture }} >> ${{ env.LAYER_NAME }}/${{ matrix.aws_region }}
       - name: public layer
         run: |
           layerVersion=$(
@@ -101,66 +101,3 @@ jobs:
         with:
           name: ${{ env.LAYER_NAME }}
           path: ${{ env.LAYER_NAME }}/${{ matrix.aws_region }}
-  generate-note:
-    runs-on: ubuntu-latest
-    needs: publish-prod
-    strategy:
-      matrix:
-        architecture: ${{ fromJson(github.event.inputs.architecture) }}
-    steps:
-      - uses: hashicorp/setup-terraform@v2
-      - name: Get layer name by substituting `${{ matrix.architecture }}` into Workflow Input name keyword
-        run: |
-          echo LAYER_NAME=$(echo "${{ github.event.inputs.layer_name_keyword }}" | sed 's/<ARCHITECTURE>/${{ matrix.architecture }}/') | tee --append $GITHUB_ENV
-      - name: Get layer kind by parsing `${{ github.event.inputs.layer_name_keyword }}`
-        run: |
-          echo LAYER_KIND=$(echo "${{ github.event.inputs.layer_name_keyword }}" | cut -d - -f 2) | tee --append $GITHUB_ENV
-      - name: download layerARNs
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.LAYER_NAME }}
-          path: ${{ env.LAYER_NAME }}
-      - name: show layerARNs
-        run: |
-          for file in ${{ env.LAYER_NAME }}/*
-          do
-          echo $file
-          cat $file
-          done
-      - name: generate layer-note
-        working-directory: ${{ env.LAYER_NAME }}
-        run: |
-          echo "| Region | Layer ARN |" >> ../layer-note
-          echo "|  ----  | ----  |" >> ../layer-note
-          for file in *
-          do
-          read arn < $file
-          echo "| " $file " | " $arn " |" >> ../layer-note
-          done
-          cd ..
-          cat layer-note
-      - name: generate tf layer
-        working-directory: ${{ env.LAYER_NAME }}
-        run: |
-          echo "locals {" >> ../layer.tf
-          if [ "${{ env.LAYER_KIND }}" != 'collector' ]
-          then
-            echo "  sdk_layer_arns_${{ matrix.architecture }} = {" >> ../layer.tf
-          else
-            echo "  collector_layer_arns_${{ matrix.architecture }} = {" >> ../layer.tf
-          fi
-          for file in *
-          do
-          read arn < $file
-          echo "    \""$file"\" = \""$arn"\"" >> ../layer.tf
-          done
-          cd ..
-          echo "  }" >> layer.tf
-          echo "}" >> layer.tf
-          terraform fmt layer.tf
-          cat layer.tf
-      - name: upload layer tf file
-        uses: actions/upload-artifact@v3
-        with:
-          name: layer_${{ matrix.architecture }}.tf
-          path: layer.tf
